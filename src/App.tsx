@@ -1,6 +1,7 @@
 import "./App.css";
 import { useState } from "react";
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
 /*
 deck - nostopakka
@@ -95,31 +96,39 @@ const initialState: State = {
 };
 
 // Pelin state ja funktiot zustandilla, ei tallennettu vielä muistiin
-const useGameStore = create<State & Actions>()((set) => ({
-  ...initialState,
-  shuffleDeck: () =>
-    set((state) => ({
-      deck: shuffleDeck(state.deck),
-    })),
-  removeCard: () =>
-    set((state) => ({
-      deck: removeCard(state.deck),
-    })),
-  addPlayer: (player: Player) =>
-    set((state) => ({
-      players: [...state.players, player],
-    })),
-  handCards: () =>
-    set((state) => ({
-      deck: handCards(state.deck, state.players, state.isHanded).newDeck,
-      players: handCards(state.deck, state.players, state.isHanded).newPlayers,
-      isHanded: true,
-    })),
-  resetGame: () =>
-    set(() => ({
+const useGameStore = create<State & Actions>()(
+  persist(
+    (set) => ({
       ...initialState,
-    })),
-}));
+      shuffleDeck: () =>
+        set((state) => ({
+          deck: shuffleDeck(state.deck),
+        })),
+      removeCard: () =>
+        set((state) => ({
+          deck: removeCard(state.deck),
+        })),
+      addPlayer: (player: Player) =>
+        set((state) => ({
+          players: [...state.players, player],
+        })),
+      handCards: () =>
+        set((state) => ({
+          deck: handCards(state.deck, state.players, state.isHanded).newDeck,
+          players: handCards(state.deck, state.players, state.isHanded)
+            .newPlayers,
+          isHanded: true,
+        })),
+      resetGame: () =>
+        set(() => ({
+          ...initialState,
+        })),
+    }),
+    {
+      name: "game",
+    }
+  )
+);
 
 function App() {
   const {
