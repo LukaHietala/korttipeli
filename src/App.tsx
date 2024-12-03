@@ -1,4 +1,5 @@
 import './App.css';
+import { useState } from 'react';
 import { create } from "zustand"
 
 /*
@@ -6,16 +7,25 @@ deck - nostopakka
 usedDeck - laittopakka
 */
 
+// Base types
 type Card = { suit: string; value: number };
 type Player = { name: string; hand: Card[] };
 
-interface GameState {
-  deck: Card[];
-  usedDeck: Card[];
-  shuffleDeck: () => void;
-  removeCard: () => void;
-  players: Player[];
+// Game state and actions types
+type State = {
+  deck: Card[]
+  usedDeck: Card[]
+  players: Player[]
+  isHanded: boolean
 }
+type Actions = {
+  shuffleDeck: () => void
+  removeCard: () => void
+  addPlayer: (player: Player) => void
+  handCards: () => void
+  resetGame: () => void
+}
+
 
 const createBaseDeck = () => {
   const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
@@ -53,40 +63,69 @@ const removeCard = (deck: Card[]) => {
   return newDeck;
 };
 
-const putCard = (deck: Card[], usedDeck: Card[]) => {
-  // TODO
-  return null
-}
+const handCards = (deck: Card[], players: Player[], isHanded: boolean) => {
+  if (players.length === 0) {
+    console.log('Ei pelaajia');
+    return { newDeck: deck, newPlayers: players };
+  }
+  
+  if (isHanded) {
+    console.log('Kortit on jo jaettu');
+    return { newDeck: deck, newPlayers: players };
+  }
+  
+  if (deck.length < players.length * 5) {
+    console.log('Pakka on liian pieni');
+    return { newDeck: deck, newPlayers: players };
+  }
+  
+  const slicedDeck = deck.slice(0, players.length * 5);
+  const newDeck = deck.slice(players.length * 5);
+  const newPlayers = players.map((player, i) => ({
+    ...player,
+    hand: slicedDeck.slice(i * 5, i * 5 + 5)
+  }));
+  return { newDeck, newPlayers };
+};
 
-const drawCard = (deck: Card[]) => {
-  // TODO
-  return null
-}
-
-const createPlayer = ({hand, name}: Player) => {
-  // TODO
-  return {hand, name}
-}
-
-// Pelin state ja funktiot zustandilla
-const useGameStore = create<GameState>(set => ({
+const initialState: State = {
   deck: createBaseDeck(),
+  usedDeck: [],
+  players: [],
+  isHanded: false
+}
+
+// Pelin state ja funktiot zustandilla, ei tallennettu vielä muistiin
+const useGameStore = create<State & Actions>()((set) => ({
+  ...initialState,
   shuffleDeck: () => set(state => ({
     deck: shuffleDeck(state.deck)
   })),
   removeCard: () => set(state => ({
     deck: removeCard(state.deck)
   })),
-  players: [],
-  usedDeck: [],
+  addPlayer: (player: Player) => set(state => ({
+    players: [...state.players, player]
+  })),
+  handCards: () => set(state => ({
+    deck: handCards(state.deck, state.players, state.isHanded).newDeck,
+    players: handCards(state.deck, state.players, state.isHanded).newPlayers,
+    isHanded: true
+  })),
+  resetGame: () => set(() => ({
+    ...initialState
+  }))
 }));
 
 function App() {
-  const { deck, shuffleDeck, removeCard } = useGameStore();
+  const { deck, shuffleDeck, removeCard, players, addPlayer, handCards, isHanded, resetGame} = useGameStore();
+
+  const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
+  const [playerName, setPlayerName] = useState('');
   
   return (
     <>
-      <div>
+      <div className='inline-flex space-x-2'>
         <button onClick={shuffleDeck}>
           Sekoita pakka
         </button>
@@ -96,10 +135,58 @@ function App() {
         <button onClick={() => console.log(deck)}>
           Lunttaa pakka
         </button>
+        <button onClick={handCards} disabled={isHanded}>
+          Jaa kortit
+        </button>
+        <button onClick={() => resetGame()}>
+          Nollaa peli
+        </button>
       </div>
       <p>
         Pakan koko: {deck.length}
       </p>
+      <button onClick={() => setIsCreatingPlayer(true)}>
+        Lisää pelaaja
+      </button>
+      {isCreatingPlayer && (
+        <div>
+          <input
+            type='text'
+            placeholder='Pelaajan nimi'
+            value={playerName}
+            onChange={e => setPlayerName(e.target.value)}
+          />
+          <button onClick={() => {
+            addPlayer({ name: playerName, hand: [] });
+            setIsCreatingPlayer(false);
+          }}>
+            Lisää pelaaja
+          </button>
+        </div>
+      )}
+      <div className='flex flex-row space-x-4'>
+        <div className='max-h-[30rem] overflow-auto'>
+          {deck.map((card, i) => (
+            <div key={i}>
+          {card.value} of {card.suit}
+            </div>
+          ))}
+        </div>
+        <div className='grid grid-cols-3 gap-4 h-min'>
+            {players.map((player, i) => (
+              <div key={i}>
+                {player.name}
+                <div>
+                  {player.hand.map((card, j) => (
+                    <div key={j}>
+                      {card.value} of {card.suit}
+                    </div>
+                  ))}
+                  </div>
+              </div>
+            ))}
+          </div>
+      </div>
     </>
   );
 }
