@@ -30,13 +30,26 @@ type Actions = {
   resetGame: () => void;
 };
 
+const getCardSvgPath = (card: Card) => {
+  const value =
+    card.value === 1
+      ? "ace"
+      : card.value === 11
+      ? "jack"
+      : card.value === 12
+      ? "queen"
+      : card.value === 13
+      ? "king"
+      : card.value;
+  return `/cards/${card.suit}_${value}.svg`;
+};
+
 const createBaseDeck = () => {
   const suits = ["hearts", "diamonds", "clubs", "spades"];
-  // 2-10, J, Q, K, A, ei jokereita ja erikoiskorteilla on omat arvonsa suuruden perustella 11-13
+  // 1(A)-10, J, Q, K, ei jokereita ja erikoiskorteilla on omat arvonsa suuruden perustella 11-13
   // Suits on maat, eli hertta, ruutu, risti ja pata
   // 13+13+13+13 = 52 eli 13 per maa
   // Values on vain valmis pohja deck arraylle
-  // Ne on hieman offsetattu, koska values alkaa 1, mikä on todellisuudessa 2
   const values = Array.from({ length: 13 }, (_, i) => i + 1);
   const deck: Card[] = [];
 
@@ -214,7 +227,11 @@ function App() {
               <div>
                 {player.hand.map((card, j) => (
                   <div key={j}>
-                    {card.value} of {card.suit}
+                    <img
+                      src={getCardSvgPath(card)}
+                      alt={`${card.value} of ${card.suit}`}
+                      className="w-14 h-max"
+                    />
                   </div>
                 ))}
               </div>
