@@ -18,12 +18,15 @@ type State = {
   usedDeck: Card[];
   players: Player[];
   isHanded: boolean;
+  turn: number;
 };
 type Actions = {
   shuffleDeck: () => void;
   removeCard: () => void;
   addPlayer: (player: Player) => void;
   handCards: () => void;
+  // Normaalisti menee seuraavalle pelaajalle, pitää syöttää manuaalisesti jos jokin sääntö toteutuu
+  nextPlayerTurn: (turnIndex?: number) => void;
   resetGame: () => void;
 };
 
@@ -88,11 +91,23 @@ const handCards = (deck: Card[], players: Player[], isHanded: boolean) => {
   return { newDeck, newPlayers };
 };
 
+const nextPlayerTurn = (
+  players: Player[],
+  currentTurnPlayerIndex: number,
+  nextPlayerIndex?: number
+) => {
+  if (players.length === 0) return 0;
+  return nextPlayerIndex
+    ? nextPlayerIndex
+    : (currentTurnPlayerIndex + 1) % players.length;
+};
+
 const initialState: State = {
   deck: createBaseDeck(),
   usedDeck: [],
   players: [],
   isHanded: false,
+  turn: 0,
 };
 
 // Pelin state ja funktiot zustandilla, ei tallennettu vielä muistiin
@@ -119,6 +134,10 @@ const useGameStore = create<State & Actions>()(
             .newPlayers,
           isHanded: true,
         })),
+      nextPlayerTurn: (turnIndex?: number) =>
+        set((state) => ({
+          turn: nextPlayerTurn(state.players, state.turn, turnIndex),
+        })),
       resetGame: () =>
         set(() => ({
           ...initialState,
@@ -140,6 +159,9 @@ function App() {
     handCards,
     isHanded,
     resetGame,
+    usedDeck,
+    nextPlayerTurn,
+    turn,
   } = useGameStore();
 
   const [isCreatingPlayer, setIsCreatingPlayer] = useState(false);
@@ -154,6 +176,7 @@ function App() {
         <button onClick={handCards} disabled={isHanded}>
           Jaa kortit
         </button>
+        <button onClick={() => nextPlayerTurn()}>Seuraava pelaaja</button>
         <button onClick={() => resetGame()}>Nollaa peli</button>
       </div>
       <p>Pakan koko: {deck.length}</p>
@@ -197,6 +220,16 @@ function App() {
               </div>
             </div>
           ))}
+        </div>
+        <div>
+          {usedDeck.map((card, i) => (
+            <div key={i}>
+              {card.value} of {card.suit}
+            </div>
+          ))}
+        </div>
+        <div>
+          <p>Vuorossa: {players[turn]?.name}</p>
         </div>
       </div>
     </>
