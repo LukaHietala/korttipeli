@@ -22,7 +22,6 @@ type State = {
 };
 type Actions = {
   shuffleDeck: () => void;
-  removeCard: () => void;
   addPlayer: (player: Player) => void;
   handCards: () => void;
   // Normaalisti menee seuraavalle pelaajalle, pitää syöttää manuaalisesti jos jokin sääntö toteutuu
@@ -69,13 +68,6 @@ const shuffleDeck = (deck: Card[]) => {
     const j = Math.floor(Math.random() * (i + 1));
     [newDeck[i], newDeck[j]] = [newDeck[j], newDeck[i]];
   }
-  return newDeck;
-};
-
-const removeCard = (deck: Card[]) => {
-  if (deck.length === 0) return deck;
-  const newDeck = [...deck];
-  newDeck.pop();
   return newDeck;
 };
 
@@ -132,10 +124,6 @@ const useGameStore = create<State & Actions>()(
         set((state) => ({
           deck: shuffleDeck(state.deck),
         })),
-      removeCard: () =>
-        set((state) => ({
-          deck: removeCard(state.deck),
-        })),
       addPlayer: (player: Player) =>
         set((state) => ({
           players: [...state.players, player],
@@ -166,7 +154,6 @@ function App() {
   const {
     deck,
     shuffleDeck,
-    removeCard,
     players,
     addPlayer,
     handCards,
@@ -184,16 +171,14 @@ function App() {
     <>
       <div className="inline-flex space-x-2">
         <button onClick={shuffleDeck}>Sekoita pakka</button>
-        <button onClick={removeCard}>Ota pakasta kortti</button>
         <button onClick={() => console.log(deck)}>Lunttaa pakka</button>
         <button onClick={handCards} disabled={isHanded}>
           Jaa kortit
         </button>
         <button onClick={() => nextPlayerTurn()}>Seuraava pelaaja</button>
         <button onClick={() => resetGame()}>Nollaa peli</button>
+        <button onClick={() => setIsCreatingPlayer(true)}>Lisää pelaaja</button>
       </div>
-      <p>Pakan koko: {deck.length}</p>
-      <button onClick={() => setIsCreatingPlayer(true)}>Lisää pelaaja</button>
       {isCreatingPlayer && (
         <div>
           <input
@@ -212,27 +197,24 @@ function App() {
           </button>
         </div>
       )}
-      <div className="flex flex-row space-x-4">
-        <div className="max-h-[30rem] overflow-auto">
-          {deck.map((card, i) => (
-            <div key={i}>
-              {card.value} of {card.suit}
-            </div>
-          ))}
-        </div>
-        <div className="grid grid-cols-3 gap-4 h-min">
+      <div className="flex flex-row space-x-4 mt-6">
+        <div className="grid grid-cols-2 gap-4 h-min">
           {players.map((player, i) => (
-            <div key={i}>
-              {player.name}
-              <div>
+            <div
+              key={i}
+              className={`p-4 ${
+                players[turn] === player ? "bg-neutral-700" : ""
+              } outline outline-1 outline-neutral-700 rounded flex flex-col space-y-2`}
+            >
+              <span>{player.name}</span>
+              <div className="flex-row space-x-1">
                 {player.hand.map((card, j) => (
-                  <div key={j}>
-                    <img
-                      src={getCardSvgPath(card)}
-                      alt={`${card.value} of ${card.suit}`}
-                      className="w-14 h-max"
-                    />
-                  </div>
+                  <img
+                    key={j}
+                    src={getCardSvgPath(card)}
+                    alt={`${card.value} of ${card.suit}`}
+                    className="w-14 h-max"
+                  />
                 ))}
               </div>
             </div>
@@ -246,7 +228,11 @@ function App() {
           ))}
         </div>
         <div>
-          <p>Vuorossa: {players[turn]?.name}</p>
+          {players.length > 0 ? (
+            <p>Vuorossa: {players[turn]?.name}</p>
+          ) : (
+            <p>Ei pelaajia</p>
+          )}
         </div>
       </div>
     </>
